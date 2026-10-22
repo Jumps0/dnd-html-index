@@ -55,6 +55,11 @@ export default function RecapsPage() {
   const [presentation, setPresentation] = useState<PresentationData | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [query, setQuery] = useState('');
+  const [listQuery, setListQuery] = useState('');
+  const [listCounts, setListCounts] = useState<Record<string, number>>({});
+  const [listSearchProgress, setListSearchProgress] = useState(0);
+  const [listSearchInProgress, setListSearchInProgress] = useState(false);
+  const [listSearchError, setListSearchError] = useState<string | null>(null);
   const [currentMatch, setCurrentMatch] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +69,68 @@ export default function RecapsPage() {
   useEffect(() => {
     document.title = selectedFile ? `${selectedFile.name} - Recaps` : 'Recaps';
   }, [selectedFile]);
+
+  useEffect(() => {
+    const searchTerm = listQuery.trim();
+    if (selectedFile || !searchTerm) {
+      setListCounts({});
+      setListSearchProgress(0);
+      setListSearchInProgress(false);
+      setListSearchError(null);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setListCounts({});
+    setListSearchProgress(0);
+    setListSearchInProgress(true);
+    setListSearchError(null);
+
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        let failedCount = 0;
+
+        for (let index = 0; index < recapFiles.length; index += 1) {
+          if (cancelled) return;
+
+          const file = recapFiles[index];
+          const handler = new PptxHandler();
+          try {
+            const response = await fetch(file.url);
+            if (!response.ok) throw new Error(`Unable to read ${file.name}`);
+            const data = await handler.load(await response.arrayBuffer());
+            if (cancelled) return;
+
+            const count = findText(
+              data.slides,
+              new RegExp(escapeRegExp(searchTerm), 'gi'),
+            ).length;
+            setListCounts((current) => ({ ...current, [file.url]: count }));
+          } catch {
+            if (cancelled) return;
+            failedCount += 1;
+          } finally {
+            handler.dispose();
+          }
+
+          if (cancelled) return;
+          setListSearchProgress(index + 1);
+        }
+
+        setListSearchError(
+          failedCount
+            ? `Could not search ${failedCount} presentation${failedCount === 1 ? '' : 's'}.`
+            : null,
+        );
+        setListSearchInProgress(false);
+      })();
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [listQuery, selectedFile]);
 
   useEffect(() => {
     if (!selectedFile) {
@@ -117,6 +184,9 @@ export default function RecapsPage() {
 
   const activeMatch: SearchMatch | undefined = matches[currentMatch];
   const slideIndex = activeMatch?.slideIndex ?? currentSlide;
+  const activeSlideMatchIndex = activeMatch
+    ? matches.slice(0, currentMatch).filter((match) => match.slideIndex === slideIndex).length
+    : -1;
   const slideSvg = useMemo(() => {
     if (!presentation || !presentation.slides[slideIndex]) return null;
     return SvgExporter.exportSlide(
@@ -206,11 +276,14 @@ export default function RecapsPage() {
 
     const namespace = 'http://www.w3.org/2000/svg';
     const searchPattern = new RegExp(escapeRegExp(searchTerm), 'gi');
+    let slideMatchIndex = 0;
     svg.querySelectorAll<SVGTextContentElement>('text').forEach((textElement) => {
       const text = textElement.textContent ?? '';
       let match: RegExpExecArray | null;
 
       while ((match = searchPattern.exec(text)) !== null) {
+        const isActiveMatch = slideMatchIndex === activeSlideMatchIndex;
+        slideMatchIndex += 1;
         const start = Array.from(text.slice(0, match.index)).length;
         const length = Array.from(match[0]).length;
         let left = Number.POSITIVE_INFINITY;
@@ -236,13 +309,13 @@ export default function RecapsPage() {
         highlight.setAttribute('width', String(right - left + padding * 2));
         highlight.setAttribute('height', String(bottom - top + padding * 2));
         highlight.setAttribute('rx', String(Math.min(2, padding)));
-        highlight.setAttribute('fill', '#168BFF');
-        highlight.setAttribute('fill-opacity', '0.35');
+        highlight.setAttribute('fill', isActiveMatch ? '#4DAAFF' : '#168BFF');
+        highlight.setAttribute('fill-opacity', isActiveMatch ? '0.4' : '0.35');
         highlight.setAttribute('data-search-highlight', 'true');
         textElement.parentNode?.insertBefore(highlight, textElement);
       }
     });
-  }, [highlightedSlideSvg, query]);
+  }, [activeSlideMatchIndex, highlightedSlideSvg, query]);
 
   useEffect(() => {
     const handleFindShortcut = (event: KeyboardEvent) => {
@@ -281,22 +354,86 @@ export default function RecapsPage() {
     }
   };
 
+  const visibleRecapFiles = listQuery.trim()
+    ? recapFiles.filter((file) => (listCounts[file.url] ?? 0) > 0)
+    : recapFiles;
+  const listResultCount = Object.values(listCounts).reduce((total, count) => total + count, 0);
+
   if (!selectedFile) {
     return (
       <main className="subpage recaps-page">
         <h1 className="subpage-title">Recaps</h1>
+        <div className={`recap-library-search${listQuery ? ' has-query' : ''}`} role="search">
+          {listSearchInProgress && (
+            <div
+              aria-label="Presentation search progress"
+              aria-valuemax={recapFiles.length || 1}
+              aria-valuenow={listSearchProgress}
+              className="recap-library-progress"
+              role="progressbar"
+            >
+              <span
+                style={{
+                  width: `${recapFiles.length ? (listSearchProgress / recapFiles.length) * 100 : 100}%`,
+                }}
+              />
+            </div>
+          )}
+          <input
+            aria-label="Search all presentations"
+            autoComplete="off"
+            onChange={(event) => {
+              setListCounts({});
+              setListSearchProgress(0);
+              setListQuery(event.target.value);
+            }}
+            placeholder="Search all presentations"
+            type="search"
+            value={listQuery}
+          />
+          <span aria-live="polite" className="recap-library-result-total">
+            {listResultCount} {listQuery.trim() && listSearchInProgress ? 'found' : 'results'}
+          </span>
+          {listQuery && (
+            <button
+              aria-label="Clear search"
+              className="recap-library-clear"
+              onClick={() => {
+                setListCounts({});
+                setListSearchProgress(0);
+                setListQuery('');
+              }}
+              type="button"
+            >
+              ×
+            </button>
+          )}
+        </div>
+        {listSearchError && <p className="recap-library-search-error" role="status">{listSearchError}</p>}
         <div className="recap-list" aria-label="PowerPoint recaps">
-          {recapFiles.map((file) => (
+          {visibleRecapFiles.map((file) => (
             <button
               className="main-button recap-file-button"
-              key={file.name}
+              key={file.url}
               onClick={() => setSelectedFile(file)}
               type="button"
             >
               {file.name.replace(/\.pptx$/i, '')}
+              {listQuery.trim() && (
+                <span
+                  aria-label={`${listCounts[file.url]} matches`}
+                  className="recap-result-count"
+                  title={`${listCounts[file.url]} matches`}
+                >
+                  {listCounts[file.url]}
+                </span>
+              )}
             </button>
           ))}
           {recapFiles.length === 0 && <p>No PowerPoint files were found in assets/slides.</p>}
+          {listQuery.trim() && !listSearchInProgress && visibleRecapFiles.length === 0 && recapFiles.length > 0 && (
+            <p>No presentations matched that search.</p>
+          )}
         </div>
       </main>
     );
@@ -320,7 +457,7 @@ export default function RecapsPage() {
         </span>
       </header>
 
-      <div className="recap-search" role="search">
+      <div className={`recap-search${query ? ' has-query' : ''}`} role="search">
         <input
           aria-label="Find text in presentation"
           autoComplete="off"
@@ -355,6 +492,20 @@ export default function RecapsPage() {
         >
           &#8250;
         </button>
+        {query && (
+          <button
+            aria-label="Clear presentation search"
+            className="recap-search-clear"
+            onClick={() => {
+              setQuery('');
+              setCurrentMatch(0);
+            }}
+            title="Clear search"
+            type="button"
+          >
+            ×
+          </button>
+        )}
       </div>
 
       {activeMatch && (
