@@ -49,6 +49,10 @@ export default class MenuBuilder {
   buildDarwinTemplate(): MenuItemConstructorOptions[] {
     const subMenuAbout: MenuItemConstructorOptions = { role: 'appMenu' };
     const subMenuEdit: MenuItemConstructorOptions = { role: 'editMenu' };
+    const subMenuNavigate: MenuItemConstructorOptions = {
+      label: 'Navigate',
+      submenu: this.buildNavigateTemplate(),
+    };
     const subMenuWindow: MenuItemConstructorOptions = { role: 'windowMenu' };
     const subMenuView: MenuItemConstructorOptions = {
       label: 'View',
@@ -86,7 +90,30 @@ export default class MenuBuilder {
       ],
     };
 
-    return [subMenuAbout, subMenuEdit, subMenuView, subMenuWindow, subMenuHelp];
+    return [
+      subMenuAbout,
+      subMenuEdit,
+      subMenuNavigate,
+      subMenuView,
+      subMenuWindow,
+      subMenuHelp,
+    ];
+  }
+
+  buildNavigateTemplate(): MenuItemConstructorOptions[] {
+    const pages = [
+      { label: 'Main Menu', path: '/' },
+      { label: 'Notes', path: '/notes' },
+      { label: 'Recaps', path: '/recaps' },
+      { label: 'Session Recordings', path: '/session-recordings' },
+      { label: 'Roll20 Messages', path: '/roll20-messages' },
+      { label: 'Discord Messages', path: '/discord-messages' },
+    ];
+
+    return pages.map(({ label, path }) => ({
+      label,
+      click: () => this.mainWindow.webContents.send('navigate-to', path),
+    }));
   }
 
   buildViewTemplate(): MenuItemConstructorOptions[] {
@@ -111,6 +138,10 @@ export default class MenuBuilder {
         submenu: [{ role: 'close' }],
       },
       { role: 'editMenu' },
+      {
+        label: '&Navigate',
+        submenu: this.buildNavigateTemplate(),
+      },
       {
         label: '&View',
         submenu: this.buildViewTemplate(),

@@ -1,0 +1,23 @@
+.notes-page {
+  width: min(100% - 48px, 960px);
+  margin: 0 auto;
+  padding: 32px 0;
+}
+
+.notes-page .subpage-title {
+  margin: 0 0 32px;
+  font-size: 64px;
+  font-weight: bold;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .notes-page {
+    width: min(100% - 32px, 440px);
+  }
+
+  .notes-page .subpage-title {
+    font-size: 48px;
+  }
+}

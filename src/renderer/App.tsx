@@ -1,5 +1,18 @@
-import { MemoryRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import {
+  MemoryRouter as Router,
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+} from 'react-router-dom';
 import { useEffect } from 'react';
+
+import NotesPage from './pages/NotesPage';
+import RecapsPage from './pages/RecapsPage';
+import SessionRecordingsPage from './pages/SessionRecordingsPage';
+import Roll20MessagesPage from './pages/Roll20MessagesPage';
+import DiscordMessagesPage from './pages/DiscordMessagesPage';
+
 import notesImage from '../../assets/page images/notes.png';
 import recapsImage from '../../assets/page images/slides.png';
 import recordingsImage from '../../assets/page images/recordings.png';
@@ -14,6 +27,37 @@ const mainPages = [
   { label: 'Roll20 Messages', path: '/roll20-messages', image: roll20Image },
   { label: 'Discord Messages', path: '/discord-messages', image: discordImage },
 ];
+
+function NavigationBridge() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const unsubscribe = window.electron?.ipcRenderer.on('navigate-to', (path) => {
+      if (typeof path === 'string') {
+        navigate(path);
+      }
+    });
+
+    const handleMouseNavigation = (event: MouseEvent) => {
+      if (event.button === 3) {
+        event.preventDefault();
+        navigate(-1);
+      } else if (event.button === 4) {
+        event.preventDefault();
+        navigate(1);
+      }
+    };
+
+    window.addEventListener('mousedown', handleMouseNavigation, true);
+
+    return () => {
+      unsubscribe?.();
+      window.removeEventListener('mousedown', handleMouseNavigation, true);
+    };
+  }, [navigate]);
+
+  return null;
+}
 
 function Hello() {
   useEffect(() => {
@@ -39,26 +83,17 @@ function Hello() {
   );
 }
 
-function TitlePage({ title }: { title: string }) {
-  useEffect(() => {
-    document.title = title;
-  }, [title]);
-
-  return (
-    <main className="page-container">
-      <h1 className="title-header">{title}</h1>
-    </main>
-  );
-}
-
 export default function App() {
   return (
     <Router>
+      <NavigationBridge />
       <Routes>
         <Route path="/" element={<Hello />} />
-        {mainPages.map(({ label, path }) => (
-          <Route key={path} path={path} element={<TitlePage title={label} />} />
-        ))}
+        <Route path="/notes" element={<NotesPage />} />
+        <Route path="/recaps" element={<RecapsPage />} />
+        <Route path="/session-recordings" element={<SessionRecordingsPage />} />
+        <Route path="/roll20-messages" element={<Roll20MessagesPage />} />
+        <Route path="/discord-messages" element={<DiscordMessagesPage />} />
       </Routes>
     </Router>
   );
