@@ -1,10 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'react-router-dom';
 import type {
   DiscordChannel,
   DiscordMessageResult,
   DiscordSearchResponse,
 } from '../../main/preload';
 import './DiscordMessagesPage.css';
+
+import discordLogoImage from '../../../assets/icons/discord-server-logo-icon.png';
 
 export default function DiscordMessagesPage() {
   const [channels, setChannels] = useState<DiscordChannel[]>([]);
@@ -149,7 +152,7 @@ export default function DiscordMessagesPage() {
     <main className="subpage discord-messages-page">
       <aside className="discord-sidebar">
         <div className="discord-sidebar-heading">
-          <div className="discord-brand-mark" aria-hidden="true">D</div>
+          <img src={discordLogoImage} width="35" height="35" className='discord-brand-mark'></img>
           <div className="discord-brand-title">Discord Server Logs</div>
         </div>
         <label className="discord-search-box">

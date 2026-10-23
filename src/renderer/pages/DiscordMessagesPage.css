@@ -95,7 +95,7 @@
   font-family: Georgia, serif;
   font-size: 24px;
   line-height: 1;
-  transform: rotate(-15deg);
+  transform: translateY(-3px);;
 }
 
 .discord-search-box input {
@@ -440,6 +440,7 @@
 .discord-filter-icon {
   color: var(--discord-amber);
   font-size: 20px;
+  transform: translateY(-3px);;
 }
 
 .discord-filter-label {
@@ -460,6 +461,8 @@
   background: #1e2223;
   color: #d9dfda;
   font: inherit;
+  scrollbar-color: #38413e transparent;
+  scrollbar-width: thin;
 }
 
 .discord-filter-select option {
@@ -543,6 +546,8 @@
   .discord-filter-panel {
     padding-right: 11px;
     padding-left: 11px;
+    scrollbar-color: #38413e transparent;
+    scrollbar-width: thin;
   }
 }
 
