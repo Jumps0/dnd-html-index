@@ -130,6 +130,7 @@
   position: relative;
   grid-column: auto;
   width: 100%;
+  background-color: rgba(255,255,255,0.5);
   min-height: 64px;
   justify-content: flex-start;
   padding: 12px 60px 12px 20px;
