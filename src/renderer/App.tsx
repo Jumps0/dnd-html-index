@@ -12,6 +12,7 @@ import RecapsPage from './pages/RecapsPage';
 import SessionRecordingsPage from './pages/SessionRecordingsPage';
 import Roll20MessagesPage from './pages/Roll20MessagesPage';
 import DiscordMessagesPage from './pages/DiscordMessagesPage';
+import ShaderBackground from './ShaderBackground';
 
 import notesImage from '../../assets/page images/notes.png';
 import recapsImage from '../../assets/page images/slides.png';
@@ -86,15 +87,20 @@ function Hello() {
 export default function App() {
   return (
     <Router>
-      <NavigationBridge />
-      <Routes>
-        <Route path="/" element={<Hello />} />
-        <Route path="/notes" element={<NotesPage />} />
-        <Route path="/recaps" element={<RecapsPage />} />
-        <Route path="/session-recordings" element={<SessionRecordingsPage />} />
-        <Route path="/roll20-messages" element={<Roll20MessagesPage />} />
-        <Route path="/discord-messages" element={<DiscordMessagesPage />} />
-      </Routes>
+      <div className="app-shell">
+        <ShaderBackground />
+        <div className="app-content">
+          <NavigationBridge />
+          <Routes>
+            <Route path="/" element={<Hello />} />
+            <Route path="/notes" element={<NotesPage />} />
+            <Route path="/recaps" element={<RecapsPage />} />
+            <Route path="/session-recordings" element={<SessionRecordingsPage />} />
+            <Route path="/roll20-messages" element={<Roll20MessagesPage />} />
+            <Route path="/discord-messages" element={<DiscordMessagesPage />} />
+          </Routes>
+        </div>
+      </div>
     </Router>
   );
 }
