@@ -30,3 +30,5 @@ npm-debug.log.*
 
 assets/slides
 assets/recordings
+assets/discord-logs
+assets/roll20-logs
